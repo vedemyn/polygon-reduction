@@ -57,7 +57,7 @@ void ViewerWindow::keyEvent(unsigned char key,int x,int y){
 		mode = 3;
 		break;
 	case 'r':
-		mesh->collapseEdges(10);
+		mesh->collapseEdges(1);
 		mesh->draw(mode);
 		break;
 

@@ -46,6 +46,8 @@ void Mesh3D::readOBJ(const char* filename) {
 		}
 	}
 
+	calculateAllFaceNormals();
+
 	cout << "Found " << positions.size() << " vertex positions" << endl;
 	cout << "Found " << texCoords.size() << " texture coordinates" << endl;
 	cout << "Found " << normals.size() << " normal vectors" << endl;
@@ -149,14 +151,12 @@ unsigned short Mesh3D::indexOfVertex(string vs) {
 
 void Mesh3D::collapseEdges(int howMany) {
 
-	auto target = calculateLowestCostPair();
-	auto eraseIndex = target.first;
-	auto collapseToIndex = target.second;
-
-
-
 	for (int n = 0; n < howMany; ++n)
 	{
+		auto target = calculateLowestCostPair();
+		auto eraseIndex = target.first;
+		auto collapseToIndex = target.second;
+		std::cout << "CollapseToIndex: " <<  collapseToIndex << std::endl;
 
 		//find triangles with both vertices of the edge and remove them
 		//need an iterator first
@@ -185,6 +185,11 @@ void Mesh3D::collapseEdges(int howMany) {
 				if (it2->i[i] == eraseIndex) {
 					std::cout << "replacing vertex in " << it2 - faces.begin() << std::endl;
 					it2->i[i] = collapseToIndex;
+					//have to recalculate the face normals of these faces, since they have been changed
+					//this assumes that there's no malformed face where the same vertex is in twice......
+					// maybe rewrite so that assumption isn't true later
+					calculateFaceNormal(*it);
+					break;
 				}
 			}
 			it2++;
@@ -204,9 +209,10 @@ void Mesh3D::collapseEdges(int howMany) {
 					faces[i].i[j]--;
 			}
 		}
-	}
 
-	initialized = false;
+	}
+		initialized = false;
+
 }
 
 
@@ -247,23 +253,13 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 	}
 
 	for (int i = 0; i < p1Triangles.size(); ++i) {
-		auto pointFace = faces[p1Triangles[i]];
-		auto f1p1 = CVector(vertices[pointFace.i[0]].px, vertices[pointFace.i[0]].py, vertices[pointFace.i[0]].pz);
-		auto f1p2 = CVector(vertices[pointFace.i[1]].px, vertices[pointFace.i[1]].py, vertices[pointFace.i[1]].pz);
-		auto f1p3 = CVector(vertices[pointFace.i[2]].px, vertices[pointFace.i[2]].py, vertices[pointFace.i[2]].pz);
-		auto normal1 = crossProduct(f1p2 - f1p1, f1p2 - f1p3);
-		normal1.normalize();
+		auto normal1 = faces[p1Triangles[i]].faceNormal;
 
 		for (int j = 0; j < p1p2Triangles.size(); ++j) {
-			auto edgeFace = faces[p1p2Triangles[j]];
-			auto f2p1 = CVector(vertices[edgeFace.i[0]].px, vertices[edgeFace.i[0]].py, vertices[edgeFace.i[0]].pz);
-			auto f2p2 = CVector(vertices[edgeFace.i[1]].px, vertices[edgeFace.i[1]].py, vertices[edgeFace.i[1]].pz);
-			auto f2p3 = CVector(vertices[edgeFace.i[2]].px, vertices[edgeFace.i[2]].py, vertices[edgeFace.i[2]].pz);
-			auto normal2 = crossProduct(f2p2 - f2p1, f2p2 - f2p3);
-			normal2.normalize();
-			
+			auto normal2 = faces[p1p2Triangles[j]].faceNormal;
+
 			auto dotproduct = normal1 * normal2;
-			
+
 			startingCurvature = std::min(startingCurvature, (1.0f - dotproduct) / 2.0f);
 		}
 
@@ -272,7 +268,7 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 
 	auto cost = length * curvature;
 
-	std::cout << "cost: " <<  cost << std::endl;
+	//std::cout << "cost: " << cost << std::endl;
 	return cost;
 
 }
@@ -280,7 +276,7 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 std::pair<unsigned short, unsigned short> Mesh3D::calculateLowestCostPair() {
 	std::pair <unsigned short, unsigned short> result;
 	double collapseCost = DBL_MAX;
-	
+
 	auto it = faces.begin();
 	while (it != faces.end()) {
 		for (int i = 0; i < 3; ++i) {
@@ -288,13 +284,13 @@ std::pair<unsigned short, unsigned short> Mesh3D::calculateLowestCostPair() {
 			if (cost < collapseCost) {
 				collapseCost = cost;
 				result.first = it->i[i];
-				result.first = it->i[(i+1)%3];
+				result.second = it->i[(i + 1) % 3];
 			}
 			cost = calculateCollapseCost(it->i[i], it->i[(i + 2) % 3]);
 			if (cost < collapseCost) {
 				collapseCost = cost;
 				result.first = it->i[i];
-				result.first = it->i[(i+2)%3];
+				result.second = it->i[(i + 2) % 3];
 			}
 		}
 		it++;
@@ -302,4 +298,21 @@ std::pair<unsigned short, unsigned short> Mesh3D::calculateLowestCostPair() {
 	std::cout << "Lowest Cost: " << collapseCost << std::endl;
 
 	return result;
+}
+
+
+void Mesh3D::calculateFaceNormal(Triangle face) {
+	auto p1 = CVector(vertices[face.i[0]].px, vertices[face.i[0]].py, vertices[face.i[0]].pz);
+	auto p2 = CVector(vertices[face.i[1]].px, vertices[face.i[1]].py, vertices[face.i[1]].pz);
+	auto p3 = CVector(vertices[face.i[2]].px, vertices[face.i[2]].py, vertices[face.i[2]].pz);
+	auto normal = crossProduct(p2 - p1, p2 - p3);
+	normal.normalize();
+
+	face.faceNormal = normal;
+}
+
+void Mesh3D::calculateAllFaceNormals() {
+	for (int i = 0; i < faces.size(); ++i) {
+		calculateFaceNormal(faces[i]);
+	}
 }

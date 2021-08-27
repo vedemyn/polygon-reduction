@@ -1,4 +1,5 @@
 #pragma once
+#include "mathutil/CVector.h"
 
 struct Position {
 	Position(float x, float y, float z) { px = x; py = y; pz = z; }
@@ -43,5 +44,7 @@ struct Triangle {
 		i[2] = c;
 	}
 	unsigned short i[3];
+	CVector faceNormal;
+	
 };
 
