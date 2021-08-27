@@ -17,7 +17,7 @@ public:
 	void collapseEdges(int howMany);
 	double calculateCollapseCost(unsigned short p1, unsigned short p2);
 	std::pair<unsigned short, unsigned short> calculateLowestCostPair();
-	void calculateFaceNormal(Triangle face);
+	void calculateFaceNormal(Triangle& face);
 	void calculateAllFaceNormals();
 
 protected:

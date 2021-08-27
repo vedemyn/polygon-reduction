@@ -112,7 +112,12 @@ void Mesh3D::processFace(vector<string>& c) {
 
 	for (int i = 2; i < numVertices; ++i) {
 		unsigned short index2 = indices[i];
-		faces.push_back(Triangle(index0, index1, index2));
+		auto tri = (Triangle(index0, index1, index2));
+		faces.push_back(tri);
+		// save information on which face the indexes belong to
+		vertices[index0].faces.push_back(faces.size()-1);
+		vertices[index1].faces.push_back(faces.size()-1);
+		vertices[index2].faces.push_back(faces.size()-1);
 		index1 = index2;
 	}
 
@@ -188,7 +193,7 @@ void Mesh3D::collapseEdges(int howMany) {
 					//have to recalculate the face normals of these faces, since they have been changed
 					//this assumes that there's no malformed face where the same vertex is in twice......
 					// maybe rewrite so that assumption isn't true later
-					calculateFaceNormal(*it);
+					calculateFaceNormal(*it2);
 					break;
 				}
 			}
@@ -200,15 +205,27 @@ void Mesh3D::collapseEdges(int howMany) {
 
 
 
-		//updated indices
-		for (size_t i = 0; i < faces.size(); i++)
+		//update indices of points in triangles
+		for (int i = 0; i < faces.size(); i++)
 		{
-			for (size_t j = 0; j < 3; j++)
+			for (int j = 0; j < 3; j++)
 			{
 				if (faces[i].i[j] > eraseIndex)
 					faces[i].i[j]--;
 			}
 		}
+
+		//update indices of triangles in points...
+		for (int i = 0; i < vertices.size(); ++i)
+		{
+			for (int j = 0; j < vertices[i].faces.size(); ++j)
+			{
+				for (int k = 0; k < indicesOfTrianglesContainingEdge.size(); ++k)
+					if (vertices[i].faces[j] > indicesOfTrianglesContainingEdge[k])
+						vertices[i].faces[j]--;
+			}
+		}
+
 
 	}
 		initialized = false;
@@ -226,7 +243,9 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 	auto startingCurvature = 1.0;
 
 	//get all triangles containing p1
-	std::vector<unsigned short> p1Triangles;
+	std::vector<unsigned short> p1Triangles = vertices[p1].faces;
+	//info on vertex/triangle relation should make this loop unnecessary
+	/*
 	auto it1 = faces.begin();
 	while (it1 != faces.end()) {
 		for (int i = 0; i < 3; i++) {
@@ -237,9 +256,15 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 		}
 		it1++;
 	}
+	*/
 
-	//get all triangles containing p1 and p2
-	std::vector<unsigned short> p1p2Triangles;
+	//get all triangles containing p1 and p2	
+	std::vector<unsigned short> p1p2Triangles = p1Triangles;
+	p1p2Triangles.erase(std::remove_if(p1p2Triangles.begin(), p1p2Triangles.end(),
+		[this, p2](unsigned short i) {return (faces[i].i[0] != p2) && (faces[i].i[1] != p2) && (faces[i].i[2] != p2);}),
+		p1p2Triangles.end());
+	//as above, the loop should be unnecessary
+	/*
 	auto it2 = faces.begin();
 	while (it2 != faces.end()) {
 		for (int i = 0; i < 3; i++) {
@@ -251,6 +276,7 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 		}
 		it2++;
 	}
+	*/
 
 	for (int i = 0; i < p1Triangles.size(); ++i) {
 		auto normal1 = faces[p1Triangles[i]].faceNormal;
@@ -301,11 +327,11 @@ std::pair<unsigned short, unsigned short> Mesh3D::calculateLowestCostPair() {
 }
 
 
-void Mesh3D::calculateFaceNormal(Triangle face) {
+void Mesh3D::calculateFaceNormal(Triangle& face) {
 	auto p1 = CVector(vertices[face.i[0]].px, vertices[face.i[0]].py, vertices[face.i[0]].pz);
 	auto p2 = CVector(vertices[face.i[1]].px, vertices[face.i[1]].py, vertices[face.i[1]].pz);
 	auto p3 = CVector(vertices[face.i[2]].px, vertices[face.i[2]].py, vertices[face.i[2]].pz);
-	auto normal = crossProduct(p2 - p1, p2 - p3);
+	auto normal = crossProduct(p2 - p1, p3 - p2);
 	normal.normalize();
 
 	face.faceNormal = normal;

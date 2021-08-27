@@ -1,5 +1,6 @@
 #pragma once
 #include "mathutil/CVector.h"
+#include <vector>
 
 struct Position {
 	Position(float x, float y, float z) { px = x; py = y; pz = z; }
@@ -35,6 +36,7 @@ struct Vertex {
 	float nx;
 	float ny; 
 	float nz;
+	std::vector<unsigned short> faces;
 };
 
 struct Triangle {
