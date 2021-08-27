@@ -11,7 +11,8 @@
 ViewerWindow::ViewerWindow()
 {
 	//const char *filename = "input\\Marsienne_base.obj";
-	const char *filename = "input\\Sphere.obj";
+	//const char *filename = "input\\Sphere.obj";
+	const char *filename = "input\\suzanne.obj";
 
 	mode = 0;
 	mesh = new Mesh3D();
@@ -56,7 +57,7 @@ void ViewerWindow::keyEvent(unsigned char key,int x,int y){
 		mode = 3;
 		break;
 	case 'r':
-		mesh->collapseEdge();
+		mesh->collapseEdges(10);
 		mesh->draw(mode);
 		break;
 

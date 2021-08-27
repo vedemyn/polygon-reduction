@@ -29,7 +29,7 @@ void Mesh3D::createVertexBuffer() {
 		it++;
 	}
 
-	vertices.clear();
+	//vertices.clear();
 
 	glGenBuffers(1, &vboID); // Create the buffer ID, this is basically the same as generating texture ID's
     glBindBuffer(GL_ARRAY_BUFFER, vboID); // Bind the buffer (vertex array data)
@@ -58,7 +58,7 @@ void Mesh3D::createIndexBuffer() {
 		indexBuffer[ibIndex++] = f.i[2];
 		it++;
 	}
-	faces.clear();
+	//faces.clear();
 	
     glGenBuffers(1, &iboID); 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID);
