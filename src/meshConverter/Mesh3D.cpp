@@ -165,15 +165,13 @@ unsigned short Mesh3D::indexOfVertex(string vs) {
 
 		vector<string> indices = splitString(vs, '/');
 		int positionIndex = atoi(indices[0].c_str()) - 1;
-		//int texCoordIndex = atoi(indices[1].c_str()) - 1;
-		//int normalIndex = atoi(indices[2].c_str()) - 1;
+		int texCoordIndex = atoi(indices[1].c_str()) - 1;
+		int normalIndex = atoi(indices[2].c_str()) - 1;
 
-		Vertex newVertex(positions[positionIndex]);
-			/*
+		Vertex newVertex(positions[positionIndex]//);
 			,
 			texCoords[texCoordIndex],
 			normals[normalIndex]);
-*/
 		vertexIndex = vertices.size();
 		vertices.push_back(newVertex);
 		vertexHashMap[vs] = vertexIndex;
@@ -401,6 +399,14 @@ if (p2 < 0) {
 				vertices[n].neighbors[m]--;
 		}
 	}
+	//correct the references to neighbors as well
+	for (int n = 0; n < tmp.size(); ++n)
+	{
+		if (tmp[n] > p1) {
+			tmp[n]--;
+		}
+	}
+
 
 	for (int n = 0; n < tmp.size(); ++n)
 	{
