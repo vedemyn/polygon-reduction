@@ -46,21 +46,14 @@ void Mesh3D::readOBJ(const char* filename) {
 		}
 	}
 
-	calculateAllCosts();
-
-	//number of neighbors and faces on each index seems correct
-
 	for (int i = 0; i < vertices.size(); ++i)
 	{
 		std::cout << vertices[i].neighbors.size() << "  ";
 	}
-	std::cout << std::endl;
-	std::cout << std::endl;
 
-	for (int i = 0; i < vertices.size(); ++i)
-	{
-		std::cout << vertices[i].faces.size() << "  ";
-	}
+
+	calculateAllCosts();
+
 
 
 	cout << "Found " << positions.size() << " vertex positions" << endl;
@@ -206,73 +199,6 @@ void Mesh3D::collapseEdges(int howMany) {
 		std::cout << "CollapseToIndex: " << collapseToIndex << std::endl;
 
 		collapseEdge(eraseIndex, collapseToIndex);
-
-		/*
-		//find triangles with both vertices of the edge and remove them
-		//need an iterator first
-		std::vector<unsigned short> indicesOfTrianglesContainingEdge;
-		for (int n = 0; n < faces.size(); ++n) {
-			for (int i = 0; i < 3; i++) {
-				//unnecessary checking of some edges here but whatevs
-				if ((faces[n].i[i] == eraseIndex) && (faces[n].i[(i + 1) % 3] == collapseToIndex || faces[n].i[(i + 2) % 3] == collapseToIndex)) {
-					indicesOfTrianglesContainingEdge.push_back(n);
-					break;
-				}
-			}
-		}
-
-		for (int i = 0; i < indicesOfTrianglesContainingEdge.size(); i++) {
-			std::cout << "erasing " << indicesOfTrianglesContainingEdge[i] << std::endl;
-			faces.erase(faces.begin() + indicesOfTrianglesContainingEdge[i]);
-		}
-
-		//update triangles with v1 of the edge to use v2 instead
-
-		for (int n = 0; n < faces.size(); ++n) {
-			for (int i = 0; i < 3; i++) {
-				if (faces[n].i[i] == eraseIndex) {
-					std::cout << "replacing vertex in " << n << std::endl;
-					faces[n].i[i] = collapseToIndex;
-					//have to recalculate the face normals of these faces, since they have been changed
-					//this assumes that there's no malformed face where the same vertex is in twice......
-					// maybe rewrite so that assumption isn't true later
-					calculateFaceNormal(faces[n]);
-					break;
-				}
-			}
-
-		}
-		//remove v1
-		vertices.erase(vertices.begin() + eraseIndex);
-
-
-
-		//update indices of points in triangles
-		for (int i = 0; i < faces.size(); i++)
-		{
-			for (int j = 0; j < 3; j++)
-			{
-				if (faces[i].i[j] > eraseIndex)
-					faces[i].i[j]--;
-			}
-		}
-		//update indices of triangles in points, and neighbors in points...
-		for (int i = 0; i < vertices.size(); ++i)
-		{
-			for (int j = 0; j < vertices[i].faces.size(); ++j)
-			{
-				for (int k = 0; k < indicesOfTrianglesContainingEdge.size(); ++k)
-					if (vertices[i].faces[j] > indicesOfTrianglesContainingEdge[k])
-						vertices[i].faces[j]--;
-			}
-			for (int j = 0; j < vertices[i].neighbors.size(); ++j)
-			{
-				if (vertices[i].neighbors[j] > eraseIndex)
-					vertices[i].neighbors[j]--;
-			}
-		}
-		*/
-
 	}
 
 }
@@ -359,11 +285,10 @@ if (p2 < 0) {
 	}
 	std::cout << "Removed: " << facesRemovedCounter << " faces." << std::endl;
 	//replace the vertices on the remaining triangles
-	//416 removed at this point
 	auto j = vertices[p1].faces.size();
 	std::cout<< j << std::endl;
 	while (j--) {
-		replaceVertexInFace(vertices[p1].faces[j], p1, p2); //the offender that adds a vertex to its own neighbors
+		replaceVertexInFace(vertices[p1].faces[j], p1, p2); 
 	}
 	while (vertices[p1].neighbors.size())
 	{
@@ -455,11 +380,10 @@ void Mesh3D::replaceVertexInFace(unsigned short faceIndex, unsigned short toRepl
 		RemoveIfNonNeighbor(faces[faceIndex].i[i], toReplaceIndex);
 	}
 	for (int i = 0; i < 3; ++i) {
-		//assert that each of the faces vertices' face arrays contains this face exactly once
+		//assume that each of the faces vertices' face arrays contains this face exactly once
 		for (int j = 0; j < 3; ++j)
 			if (i != j)
 			{
-				//CHECK THIS WHEN SLEPT
 				if (std::count(vertices[faces[faceIndex].i[i]].neighbors.begin(), vertices[faces[faceIndex].i[i]].neighbors.end(), faces[faceIndex].i[j]) == 0)
 					vertices[faces[faceIndex].i[i]].neighbors.push_back(faces[faceIndex].i[j]);
 			}
@@ -476,6 +400,13 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 	auto length = (p2Vec - p1Vec).getLength();
 	double curvature = 0;
 
+
+	std::vector<unsigned short> mutualNeighbors = vertices[p1].neighbors;
+	mutualNeighbors.erase(std::remove_if(mutualNeighbors.begin(), mutualNeighbors.end(), [this, p2](unsigned short elem) {
+		return vertices[p2].neighbors.end() == std::find(vertices[p2].neighbors.begin(), vertices[p2].neighbors.end(), elem);
+		}));
+
+
 	std::vector<unsigned short> sides;
 
 	for (int i = 0; i < vertices[p1].faces.size(); ++i) {
@@ -484,6 +415,69 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 			sides.push_back(vertices[p1].faces[i]);
 		}
 	}
+
+	for (int i = 0; i < mutualNeighbors.size(); ++i)
+	{
+		// check the valence of the neighboring vertices
+		if (vertices[mutualNeighbors[i]].neighbors.size() <= 3) {
+			std::cout << "HELLOOOOOO1" << std::endl;
+			return 1000000.0;
+		}
+
+
+		//check that a triangle exists for each of the mutual neighbors
+		bool found = false;
+		for (int j = 0; j < sides.size(); ++j)
+		{
+			if (faces[sides[j]].i[0] == mutualNeighbors[i] || faces[sides[j]].i[1] == mutualNeighbors[i] || faces[sides[j]].i[2] == mutualNeighbors[i])
+				found = true;
+		}
+		if (!found) {
+			std::cout << "HELLOOOOOO2" << std::endl;
+			return 1000000.0;
+		}
+	}
+
+	//we only need to find out if p1 and p2 are border vertices if the edge is not a border edge (reversing the condition)
+	if (sides.size() != 1) {
+		for (int i = 0; i < vertices[p1].neighbors.size(); ++i)
+		{
+			auto neighborSidesCounter = 0;
+			for (int j = 0; j < vertices[vertices[p1].neighbors[i]].faces.size(); ++j) {
+				if (faces[vertices[vertices[p1].neighbors[i]].faces[j]].i[0] == p1 ||
+					faces[vertices[vertices[p1].neighbors[i]].faces[j]].i[1] == p1 ||
+					faces[vertices[vertices[p1].neighbors[i]].faces[j]].i[2] == p1 )
+				{
+					neighborSidesCounter++;
+				}
+			}
+			if (neighborSidesCounter == 1)
+			{
+				return 1000000.0;
+			}
+			
+		}
+		for (int i = 0; i < vertices[p2].neighbors.size(); ++i)
+		{
+			auto neighborSidesCounter = 0;
+			for (int j = 0; j < vertices[vertices[p2].neighbors[i]].faces.size(); ++j) {
+				if (faces[vertices[vertices[p2].neighbors[i]].faces[j]].i[0] == p2 ||
+					faces[vertices[vertices[p2].neighbors[i]].faces[j]].i[1] == p2 ||
+					faces[vertices[vertices[p2].neighbors[i]].faces[j]].i[2] == p2 )
+				{
+					neighborSidesCounter++;
+				}
+			}
+			if (neighborSidesCounter == 1)
+			{
+				return 1000000.0;
+			}
+			
+		}
+
+	}
+
+
 
 	for (int i = 0; i < vertices[p1].faces.size(); ++i)
 	{
