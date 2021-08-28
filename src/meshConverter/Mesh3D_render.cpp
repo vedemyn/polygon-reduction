@@ -105,6 +105,8 @@ void Mesh3D::draw(int mode) {
     // draw, Type of each element, Start Offset
     glDrawElements(GL_TRIANGLES, numPrimitives, GL_UNSIGNED_SHORT, BUFFER_OFFSET(0));
 
+	
+
     // Disable our client state back to normal drawing
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);

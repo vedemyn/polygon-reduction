@@ -23,6 +23,10 @@ struct TexCoord {
 };
 
 struct Vertex {
+
+	Vertex(Position p) {
+		px = p.px;	py = p.py;	pz = p.pz;
+	}
 	Vertex(Position p, TexCoord t, Normal n) {
 		px = p.px;	py = p.py;	pz = p.pz;
 		nx = n.nx;	ny = n.ny;	nz = n.nz;
@@ -37,6 +41,9 @@ struct Vertex {
 	float ny; 
 	float nz;
 	std::vector<unsigned short> faces;
+	std::vector<unsigned short> neighbors;
+	int collapseTarget; // int because i need a negative number to somehow save that there's no valid target... maybe a better solution somewhere
+	double collapseCost;
 };
 
 struct Triangle {

@@ -14,11 +14,17 @@ public:
 	void readOBJ(const char *filename);
 	void draw(int mode = 0);
 
+	unsigned short minimumCostVertex();
 	void collapseEdges(int howMany);
+	void collapseEdge(unsigned short p1, unsigned short p2);
+	void RemoveIfNonNeighbor(unsigned short source, unsigned short toRemove);
+	void replaceVertexInFace(unsigned short faceIndex, unsigned short toReplaceIndex, unsigned short replaceWithIndex);
 	double calculateCollapseCost(unsigned short p1, unsigned short p2);
+	void calculateCostAtVertex(unsigned short vertex);
+	void calculateAllCosts();
 	std::pair<unsigned short, unsigned short> calculateLowestCostPair();
 	void calculateFaceNormal(Triangle& face);
-	void calculateAllFaceNormals();
+
 
 protected:
 	std::vector<Position> positions;
