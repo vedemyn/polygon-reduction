@@ -9,7 +9,7 @@
 
 void Mesh3D::createVertexBuffer() {
 
-	int size = vertices.size() * 8;
+	int size = vertices.size() * 8; 
 	float *vertexBuffer = new float[size];
 
 	std::vector<Vertex>::iterator it = vertices.begin();
@@ -87,17 +87,19 @@ void Mesh3D::draw(int mode) {
     glTexCoordPointer(2, GL_FLOAT, 8*sizeof(float), BUFFER_OFFSET(3*sizeof(float)));
     glNormalPointer(     GL_FLOAT, 8*sizeof(float), BUFFER_OFFSET(5*sizeof(float)));
 	
+
+
 	switch(mode) {
 	case 0:
-		glDisableClientState(GL_COLOR_ARRAY);
-		break;
-	case 1:
 		glEnableClientState(GL_COLOR_ARRAY);
 		glColorPointer(3,      GL_FLOAT, 8*sizeof(float), BUFFER_OFFSET(5*sizeof(float)));
 		break;
-	case 2:
+	case 1:
 		glEnableClientState(GL_COLOR_ARRAY);
 		glColorPointer(3, GL_FLOAT, 8*sizeof(float), BUFFER_OFFSET(3*sizeof(float)));
+		break;
+	case 2:
+		glDisableClientState(GL_COLOR_ARRAY);
 		break;
 	}
 

@@ -1,9 +1,9 @@
-#include "GL\glew.h"
 #include "GlutWindow.h"
 #include "ArcBall.h"
 
 #include <math.h>
-#include <GL/glut.h>
+#include <GL/glew.h>
+#include "../GL/glut.h"
 #include <sys/timeb.h>
 #include <time.h>
 #include <stdio.h>

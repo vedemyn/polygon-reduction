@@ -21,6 +21,15 @@ Mesh3D::~Mesh3D(void)
 
 void Mesh3D::readOBJ(const char* filename) {
 
+	fileaddress = filename;
+
+	positions.clear();
+	texCoords.clear();
+	normals.clear();
+	vertices.clear();
+	faces.clear();
+
+	vertexHashMap.clear();
 
 	ifstream stream;
 	stream.open(filename);
@@ -46,15 +55,7 @@ void Mesh3D::readOBJ(const char* filename) {
 		}
 	}
 
-	for (int i = 0; i < vertices.size(); ++i)
-	{
-		std::cout << vertices[i].neighbors.size() << "  ";
-	}
-
-
 	calculateAllCosts();
-
-
 
 	cout << "Found " << positions.size() << " vertex positions" << endl;
 	cout << "Found " << texCoords.size() << " texture coordinates" << endl;
@@ -66,6 +67,33 @@ void Mesh3D::readOBJ(const char* filename) {
 	texCoords.clear();
 	normals.clear();
 
+	initialized = false;
+
+}
+
+void Mesh3D::writeOBJ() {
+	std::cout << fileaddress << std::endl;
+
+	ofstream stream;
+	// -4 because the ending should be ".obj" 
+	stream.open(fileaddress.insert(fileaddress.size()-4, "_reduced"));
+
+
+	for (int i = 0; i < vertices.size(); ++i)
+	{
+		stream << "v " << vertices[i].px << " " << vertices[i].py << " " << vertices[i].pz << "\n";
+		//order doesn't really matter so we could just write out these too, if they were saved
+		//stream << "vn " << vertices[i].nx << " " << vertices[i].ny << " " << vertices[i].nz << "\n";
+		//stream << "vn " << vertices[i].u << " " << vertices[i].u << "\n";
+	}
+
+	for (int i = 0; i < faces.size(); ++i)
+	{
+		stream << "f " << faces[i].i[0] + 1 << " " << faces[i].i[1] + 1 << " " << faces[i].i[2] + 1 << "\n";
+		//normals and texture coordinates could be added, but i haven't cared about them so far so it's data loss
+		// and i'd have to save the info about those in the first place
+	}
+	stream.close();
 }
 
 vector<string> Mesh3D::splitString(string& str, char delimiter)
@@ -123,28 +151,29 @@ void Mesh3D::processFace(vector<string>& c) {
 		auto tri = (Triangle(index0, index1, index2));
 		calculateFaceNormal(tri);
 		faces.push_back(tri);
+
 		// save information on which face the indexes belong to
-		//maaaaaaybe pull these out into a function lol
-		vertices[index0].faces.push_back(faces.size() - 1);
-		if (std::count(vertices[index0].neighbors.begin(), vertices[index0].neighbors.end(), index1) == 0)
-			vertices[index0].neighbors.push_back(index1);
-		if (std::count(vertices[index0].neighbors.begin(), vertices[index0].neighbors.end(), index2) == 0)
-			vertices[index0].neighbors.push_back(index2);
+		generateInterconnections(faces.size() - 1, { index0, index1, index2 });
 
-		vertices[index1].faces.push_back(faces.size() - 1);
-		if (std::count(vertices[index1].neighbors.begin(), vertices[index1].neighbors.end(), index0) == 0)
-			vertices[index1].neighbors.push_back(index0);
-		if (std::count(vertices[index1].neighbors.begin(), vertices[index1].neighbors.end(), index2) == 0)
-			vertices[index1].neighbors.push_back(index2);
-
-		vertices[index2].faces.push_back(faces.size() - 1);
-		if (std::count(vertices[index2].neighbors.begin(), vertices[index2].neighbors.end(), index0) == 0)
-			vertices[index2].neighbors.push_back(index0);
-		if (std::count(vertices[index2].neighbors.begin(), vertices[index2].neighbors.end(), index1) == 0)
-			vertices[index2].neighbors.push_back(index1);
 		index1 = index2;
 	}
 
+}
+
+void Mesh3D::generateInterconnections(unsigned short triIndex, std::vector<unsigned short> vertIndices) {
+	//vertindices is assumed to be size 3
+	for (int i = 0; i < 3; i++)
+	{
+		vertices[vertIndices[i]].faces.push_back(triIndex);
+		if (std::count(vertices[vertIndices[i]].neighbors.begin(), vertices[vertIndices[i]].neighbors.end(), vertIndices[(i+1)%3]) == 0)
+			vertices[vertIndices[i]].neighbors.push_back(vertIndices[(i+1)%3]);
+		if (std::count(vertices[vertIndices[i]].neighbors.begin(), vertices[vertIndices[i]].neighbors.end(), vertIndices[(i+2)%3]) == 0)
+			vertices[vertIndices[i]].neighbors.push_back(vertIndices[(i+2)%3]);
+	}
+}
+
+bool Mesh3D::checkIfVertexInFace(unsigned short vertIndex, unsigned short faceIndex) {
+	return  faces[faceIndex].i[0] == vertIndex || faces[faceIndex].i[1] == vertIndex || faces[faceIndex].i[2] == vertIndex;
 }
 
 unsigned short Mesh3D::indexOfVertex(string vs) {
@@ -158,13 +187,16 @@ unsigned short Mesh3D::indexOfVertex(string vs) {
 
 		vector<string> indices = splitString(vs, '/');
 		int positionIndex = atoi(indices[0].c_str()) - 1;
-		int texCoordIndex = atoi(indices[1].c_str()) - 1;
-		int normalIndex = atoi(indices[2].c_str()) - 1;
+		int texCoordIndex;
+		if (indices.size() > 1) texCoordIndex = atoi(indices[1].c_str()) - 1;
+		int normalIndex;
+		if (indices.size() > 2) normalIndex = atoi(indices[2].c_str()) - 1;
 
-		Vertex newVertex(positions[positionIndex]//);
-			,
-			texCoords[texCoordIndex],
-			normals[normalIndex]);
+		Vertex newVertex(positions[positionIndex]);
+		if (indices.size() > 2)
+			newVertex = Vertex(positions[positionIndex], texCoords[texCoordIndex], normals[normalIndex]);
+		else if (indices.size() > 1)
+			newVertex = Vertex(positions[positionIndex], texCoords[texCoordIndex]);
 		vertexIndex = vertices.size();
 		vertices.push_back(newVertex);
 		vertexHashMap[vs] = vertexIndex;
@@ -178,7 +210,7 @@ unsigned short Mesh3D::indexOfVertex(string vs) {
 	return vertexIndex;
 }
 
-unsigned short Mesh3D::minimumCostVertex() {
+int Mesh3D::minimumCostVertex() {
 	unsigned short minimumIndex = 0;
 	for (int i = 0; i < vertices.size(); ++i)
 	{
@@ -186,26 +218,39 @@ unsigned short Mesh3D::minimumCostVertex() {
 			minimumIndex = i;
 		}
 	}
+	//the costs are usually smaller than 1, this should relatively safely be one of the cases where collapse is not allowed
+	//there is certainly a better way to do this but i would have to change a lot for that
+	if (vertices[minimumIndex].collapseCost > 900000)
+		return -1;
+
 	return minimumIndex;
 }
 
-void Mesh3D::collapseEdges(int howMany) {
-
-	for (int n = 0; n < howMany; ++n)
+void Mesh3D::removeTriangles(int howMany) {
+	//actually removes edges until the desired number of triangles was removed 
+	//each removed edge usually removes 1+ triangles, so we may overshoot by a little
+	auto target = faces.size() - howMany;
+	std::cout << target << std::endl;
+	while (faces.size() > target)
 	{
 		auto eraseIndex = minimumCostVertex();
+		if (eraseIndex == -1) {
+			std::cout << "You have reduced the mesh to death. Are you proud of yourself?" << std::endl;
+			break;
+		}
 		auto collapseToIndex = vertices[eraseIndex].collapseTarget;
+		//GUIONLY
 		std::cout << "eraseIndex: " << eraseIndex << std::endl;
 		std::cout << "CollapseToIndex: " << collapseToIndex << std::endl;
 
 		collapseEdge(eraseIndex, collapseToIndex);
 	}
 
+
 }
 
 void Mesh3D::collapseEdge(unsigned short p1, unsigned short p2) {
 if (p2 < 0) {
-		std::cout << "A single vertex somehow" << std::endl;
 		if (vertices[p1].faces.size() == 0) {
 			//remove this vertex from all neighbors
 			while (vertices[p1].neighbors.size())
@@ -237,12 +282,10 @@ if (p2 < 0) {
 
 	//remove the faces on the edge p1 p2
 	auto i = vertices[p1].faces.size();
-	std::cout<< i << std::endl;
 	int facesRemovedCounter = 0;
 	while (i--) {
-		auto indexesOfFaceVertices = faces[vertices[p1].faces[i]].i;
-		if (indexesOfFaceVertices[0] == p2 || indexesOfFaceVertices[1] == p2 || indexesOfFaceVertices[2] == p2) {
-			
+		if (checkIfVertexInFace(p2, vertices[p1].faces[i]))
+		{
 			//save some data for cleanup
 			auto faceindex = vertices[p1].faces[i];
 			std::vector<unsigned short> indexesOfAllFaceVertices(std::begin(faces[faceindex].i), std::end(faces[faceindex].i));
@@ -263,7 +306,6 @@ if (p2 < 0) {
 					deletedFaceRefFromVerticesCounter++;
 				}
 			}
-			std::cout << "Deleted the " << facesRemovedCounter << ". face from " << deletedFaceRefFromVerticesCounter << " vertices" << std::endl;
 			//now correct the remaining indices that have slipped down
 			for (int n = 0; n < vertices.size(); ++n)
 			{
@@ -278,15 +320,14 @@ if (p2 < 0) {
 			for (int n = 0; n < 3; ++n) {
 				auto n2 = (n + 1) % 3;
 
-				RemoveIfNonNeighbor(indexesOfAllFaceVertices[n], indexesOfAllFaceVertices[n2]);
-				RemoveIfNonNeighbor(indexesOfAllFaceVertices[n2], indexesOfAllFaceVertices[n]);
+				checkAndRemoveFromNeighbors(indexesOfAllFaceVertices[n], indexesOfAllFaceVertices[n2]);
+				checkAndRemoveFromNeighbors(indexesOfAllFaceVertices[n2], indexesOfAllFaceVertices[n]);
 			}
 		}
 	}
 	std::cout << "Removed: " << facesRemovedCounter << " faces." << std::endl;
 	//replace the vertices on the remaining triangles
 	auto j = vertices[p1].faces.size();
-	std::cout<< j << std::endl;
 	while (j--) {
 		replaceVertexInFace(vertices[p1].faces[j], p1, p2); 
 	}
@@ -341,11 +382,11 @@ if (p2 < 0) {
 	initialized = false;
 }
 
-void Mesh3D::RemoveIfNonNeighbor(unsigned short source, unsigned short toRemove) {
+void Mesh3D::checkAndRemoveFromNeighbors(unsigned short source, unsigned short toRemove) {
 	if (std::count(vertices[source].neighbors.begin(), vertices[source].neighbors.end(), toRemove) == 0)
 		return;
 	for (int i = 0; i < vertices[source].faces.size(); ++i) {
-		if (faces[vertices[source].faces[i]].i[0] == toRemove || faces[vertices[source].faces[i]].i[1] == toRemove || faces[vertices[source].faces[i]].i[2] == toRemove)
+		if (checkIfVertexInFace(toRemove, vertices[source].faces[i]))
 			return;
 	}
 	vertices[source].neighbors.erase(std::find(
@@ -357,15 +398,11 @@ void Mesh3D::RemoveIfNonNeighbor(unsigned short source, unsigned short toRemove)
 
 void Mesh3D::replaceVertexInFace(unsigned short faceIndex, unsigned short toReplaceIndex, unsigned short replaceWithIndex)
 {
-	//assert both vertices exist
-	//assert one of the vertices in the face is  toReplaceIndex
-	//assert none of the vertices is already replaceWithIndex
 	if (toReplaceIndex == faces[faceIndex].i[0])
 		faces[faceIndex].i[0] = replaceWithIndex;
 	else if (toReplaceIndex == faces[faceIndex].i[1])
 		faces[faceIndex].i[1] = replaceWithIndex;
 	else
-		//assert this vertex has to be toreplaceindex
 		faces[faceIndex].i[2] = replaceWithIndex;
 
 	auto it = std::find(vertices[toReplaceIndex].faces.begin(), vertices[toReplaceIndex].faces.end(), faceIndex);
@@ -376,11 +413,10 @@ void Mesh3D::replaceVertexInFace(unsigned short faceIndex, unsigned short toRepl
 
 	for (int i = 0; i < 3; ++i)
 	{
-		RemoveIfNonNeighbor(toReplaceIndex, faces[faceIndex].i[i]);
-		RemoveIfNonNeighbor(faces[faceIndex].i[i], toReplaceIndex);
+		checkAndRemoveFromNeighbors(toReplaceIndex, faces[faceIndex].i[i]);
+		checkAndRemoveFromNeighbors(faces[faceIndex].i[i], toReplaceIndex);
 	}
 	for (int i = 0; i < 3; ++i) {
-		//assume that each of the faces vertices' face arrays contains this face exactly once
 		for (int j = 0; j < 3; ++j)
 			if (i != j)
 			{
@@ -398,7 +434,7 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 	auto p2Vec = CVector(vertices[p2].px, vertices[p2].py, vertices[p2].pz);
 
 	auto length = (p2Vec - p1Vec).getLength();
-	double curvature = 0;
+	double edgeProminence = 0;
 
 
 	std::vector<unsigned short> mutualNeighbors = vertices[p1].neighbors;
@@ -410,7 +446,7 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 	std::vector<unsigned short> sides;
 
 	for (int i = 0; i < vertices[p1].faces.size(); ++i) {
-		if (faces[vertices[p1].faces[i]].i[0] == p2 || faces[vertices[p1].faces[i]].i[1] == p2 || faces[vertices[p1].faces[i]].i[2] == p2)
+		if (checkIfVertexInFace(p2, vertices[p1].faces[i]))
 		{
 			sides.push_back(vertices[p1].faces[i]);
 		}
@@ -420,7 +456,6 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 	{
 		// check the valence of the neighboring vertices
 		if (vertices[mutualNeighbors[i]].neighbors.size() <= 3) {
-			std::cout << "HELLOOOOOO1" << std::endl;
 			return 1000000.0;
 		}
 
@@ -429,24 +464,25 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 		bool found = false;
 		for (int j = 0; j < sides.size(); ++j)
 		{
-			if (faces[sides[j]].i[0] == mutualNeighbors[i] || faces[sides[j]].i[1] == mutualNeighbors[i] || faces[sides[j]].i[2] == mutualNeighbors[i])
+			if (checkIfVertexInFace(mutualNeighbors[i], sides[j]))
 				found = true;
 		}
 		if (!found) {
-			std::cout << "HELLOOOOOO2" << std::endl;
 			return 1000000.0;
 		}
 	}
 
 	//we only need to find out if p1 and p2 are border vertices if the edge is not a border edge (reversing the condition)
 	if (sides.size() != 1) {
+		if (vertices.size() <= 4)
+		{
+			return 1000000.0;
+		}
 		for (int i = 0; i < vertices[p1].neighbors.size(); ++i)
 		{
 			auto neighborSidesCounter = 0;
 			for (int j = 0; j < vertices[vertices[p1].neighbors[i]].faces.size(); ++j) {
-				if (faces[vertices[vertices[p1].neighbors[i]].faces[j]].i[0] == p1 ||
-					faces[vertices[vertices[p1].neighbors[i]].faces[j]].i[1] == p1 ||
-					faces[vertices[vertices[p1].neighbors[i]].faces[j]].i[2] == p1 )
+				if (checkIfVertexInFace(p1, vertices[vertices[p1].neighbors[i]].faces[j]))
 				{
 					neighborSidesCounter++;
 				}
@@ -461,9 +497,7 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 		{
 			auto neighborSidesCounter = 0;
 			for (int j = 0; j < vertices[vertices[p2].neighbors[i]].faces.size(); ++j) {
-				if (faces[vertices[vertices[p2].neighbors[i]].faces[j]].i[0] == p2 ||
-					faces[vertices[vertices[p2].neighbors[i]].faces[j]].i[1] == p2 ||
-					faces[vertices[vertices[p2].neighbors[i]].faces[j]].i[2] == p2 )
+				if (checkIfVertexInFace(p2, vertices[vertices[p2].neighbors[i]].faces[j]))
 				{
 					neighborSidesCounter++;
 				}
@@ -476,121 +510,25 @@ double Mesh3D::calculateCollapseCost(unsigned short p1, unsigned short p2) {
 		}
 
 	}
+	else if (vertices.size() <= 3)
+	{
+		return 1000000.0;
+	}
 
 
-
+	//actual cost calculation, after considering the edge cases earlier
 	for (int i = 0; i < vertices[p1].faces.size(); ++i)
 	{
-		double mincurv = 1;
+		double startingProminence = 1;
 		for (int j = 0; j < sides.size(); ++j) {
 			double dotprod = faces[vertices[p1].faces[i]].faceNormal * faces[sides[j]].faceNormal;
-			mincurv = std::min(mincurv, (1 - dotprod) / 2.0f);
+			startingProminence = std::min(startingProminence, (1 - dotprod) / 2.0f);
 		}
-		curvature = std::max(curvature, mincurv);
+		edgeProminence = std::max(edgeProminence, startingProminence);
 	}
 
-	return length * curvature;
+	return length * edgeProminence;
 
-	/*
-	//that's not a valid edge...
-	if (p1 == p2) return 999999.0;
-
-	auto p1Vec = CVector(vertices[p1].px, vertices[p1].py, vertices[p1].pz);
-	auto p2Vec = CVector(vertices[p2].px, vertices[p2].py, vertices[p2].pz);
-
-	auto length = (p2Vec - p1Vec).getLength();
-	auto curvature = 0.0;
-
-	//get all triangles containing p1
-	std::vector<unsigned short> p1Triangles = vertices[p1].faces;
-
-	//get all triangles containing p1 and p2	
-	std::vector<unsigned short> p1p2Triangles = p1Triangles;
-	p1p2Triangles.erase(std::remove_if(p1p2Triangles.begin(), p1p2Triangles.end(),
-		[this, p2](unsigned short i) {return (faces[i].i[0] != p2) && (faces[i].i[1] != p2) && (faces[i].i[2] != p2); }),
-		p1p2Triangles.end());
-
-	//do not collapse border edges
-	// ??? unless both vertices are also border vertices
-		std::vector<unsigned short> indicesOfTrianglesContainingEdge;
-		auto triangleCounter = 0;
-		for (int n = 0; n < faces.size(); ++n) {
-			for (int i = 0; i < 3; i++) {
-				//unnecessary checking of some edges here but whatevs
-				if ((faces[n].i[i] == p1) && (faces[n].i[(i + 1) % 3] == p2 || faces[n].i[(i + 2) % 3] == p2)) {
-					indicesOfTrianglesContainingEdge.push_back(n);
-					triangleCounter++;
-					break;
-				}
-			}
-			if (triangleCounter > 2) break;
-		}
-		if (triangleCounter < 2) return 999999.0;
-
-
-	// check whether all the triangles exist for the neighbors both points have in common
-	std::vector<unsigned short> commonNeighbors = vertices[p1].neighbors;
-	commonNeighbors.erase(std::remove_if(commonNeighbors.begin(), commonNeighbors.end(),
-		[this, p2](unsigned short i) {
-			bool result = true;
-			for (int n = 0; n < vertices[p2].neighbors.size(); ++n)
-			{
-				if (vertices[p2].neighbors[n] == i)
-					result = false;
-			}
-			return result;
-		}),
-		commonNeighbors.end());
-
-	for (int i = 0; i < commonNeighbors.size(); ++i) {
-
-		// check for valence of point. But I don't have a quick way to access that,
-		// so i check if it's part of at least 4 triangles instead
-		// PROBABLY NOT CORRECT BUT CLOSE ENOUGH FOR NOW 
-		if (vertices[commonNeighbors[i]].faces.size() < 4) {
-			//std::cout << "Valence smaller 3" << std::endl;
-			return 999999.0;
-		}
-		bool triangleExists = false;
-		for (int j = 0; j < vertices[i].faces.size(); ++j) {
-			triangleExists |=  (faces[vertices[i].faces[j]].i[0] == p1 ||
-								faces[vertices[i].faces[j]].i[1] == p1 ||
-								faces[vertices[i].faces[j]].i[2] == p1)
-								&&
-							   (faces[vertices[i].faces[j]].i[0] == p2 ||
-								faces[vertices[i].faces[j]].i[1] == p2 ||
-								faces[vertices[i].faces[j]].i[2] == p2);
-
-		}
-		if (!triangleExists) {
-			//std::cout << "FOUND A NON TRIANGLE" << std::endl;
-			return 999999.0;
-		}
-	}
-
-
-
-	for (int i = 0; i < p1Triangles.size(); ++i) {
-		auto startingCurvature = 1.0;
-
-		for (int j = 0; j < p1p2Triangles.size(); ++j) {
-
-			auto normal1 = faces[p1Triangles[i]].faceNormal;
-			auto normal2 = faces[p1p2Triangles[j]].faceNormal;
-			auto dotproduct = normal1 * normal2;
-
-			startingCurvature = std::min(startingCurvature, (1.0f - dotproduct) / 2.0f);
-		}
-
-		curvature = std::max(curvature, startingCurvature);
-	}
-
-	auto cost = length * curvature;
-
-	//std::cout << "cost: " << cost << std::endl;
-	return cost;
-
-	*/
 }
 
 void Mesh3D::calculateCostAtVertex(unsigned short vertex) {
@@ -617,40 +555,6 @@ void Mesh3D::calculateAllCosts() {
 		calculateCostAtVertex(i);
 	}
 }
-
-std::pair<unsigned short, unsigned short> Mesh3D::calculateLowestCostPair() {
-	std::pair <unsigned short, unsigned short> result;
-	double collapseCost = 999999.0;
-	//for each face...
-	for (int n = 0; n < faces.size(); ++n) {
-		//for all 6 edge variations on that face (3 * 2 for swapped direction)
-		for (int i = 0; i < 3; ++i) {
-			if (faces[n].i[i] != faces[n].i[(i + 1) % 3]) {
-				auto cost = calculateCollapseCost(faces[n].i[i], faces[n].i[(i + 1) % 3]);
-				if (cost < collapseCost) {
-					collapseCost = cost;
-					result.first = faces[n].i[i];
-					result.second = faces[n].i[(i + 1) % 3];
-					std::cout << "Lower cost: " << cost << "  at vertices " << result.first << " and " << result.second << std::endl;
-				}
-
-			}
-			if (faces[n].i[i] != faces[n].i[(i + 2) % 3]) {
-				auto cost = calculateCollapseCost(faces[n].i[i], faces[n].i[(i + 2) % 3]);
-				if (cost < collapseCost) {
-					collapseCost = cost;
-					result.first = faces[n].i[i];
-					result.second = faces[n].i[(i + 2) % 3];
-					std::cout << "Lower cost: " << cost << "  at vertices " << result.first << " and " << result.second << std::endl;
-				}
-			}
-		}
-	}
-	//std::cout << "Lowest Cost: " << collapseCost << std::endl;
-
-	return result;
-}
-
 
 void Mesh3D::calculateFaceNormal(Triangle& face) {
 	

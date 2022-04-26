@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mathutil\CVector.h"
-#include "mathutil\CPosition.h"
+#include "../mathutil/CVector.h"
+#include "../mathutil/CPosition.h"
 #include <windows.h>
 
 class CArcBall;

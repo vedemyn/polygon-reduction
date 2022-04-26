@@ -1,6 +1,6 @@
 #pragma once
-#include "core/GlutWindow.h"
-#include "app/globaldefs.h"
+#include "../core/GlutWindow.h"
+#include "globaldefs.h"
 
 class Mesh3D;
 
@@ -15,6 +15,8 @@ public:
 
 	//virtual void keyEvent(unsigned char key,int x,int y);
 	void renderGeometry();
+
+	void openFileGUI();
 
 	void keyEvent(unsigned char key,int x,int y);
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "mathutil/CVector.h"
+#include "../mathutil/CVector.h"
 #include <vector>
 
 struct Position {
@@ -27,6 +27,10 @@ struct Vertex {
 	Vertex(Position p) {
 		px = p.px;	py = p.py;	pz = p.pz;
 	}
+	Vertex(Position p, TexCoord t) {
+		px = p.px;	py = p.py;	pz = p.pz;
+		u = t.u; v = t.v;
+	}
 	Vertex(Position p, TexCoord t, Normal n) {
 		px = p.px;	py = p.py;	pz = p.pz;
 		nx = n.nx;	ny = n.ny;	nz = n.nz;
@@ -35,11 +39,11 @@ struct Vertex {
 	float px;
 	float py; 
 	float pz;
-	float u;
-	float v; 
-	float nx;
-	float ny; 
-	float nz;
+	float u = 0.0;
+	float v = 0.0; 
+	float nx = 0.0;
+	float ny = 0.0; 
+	float nz = 0.0;
 	std::vector<unsigned short> faces;
 	std::vector<unsigned short> neighbors;
 	int collapseTarget; // int because i need a negative number to somehow save that there's no valid target... maybe a better solution somewhere

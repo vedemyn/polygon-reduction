@@ -15,19 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\app\globaldefs.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\core\ArcBall.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\core\GlutWindow.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\GL\glext.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\GL\glut.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="..\src\mathutil\CMatrix.h">
@@ -42,24 +30,30 @@
     <ClInclude Include="..\src\mathutil\CVector.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\GL\glext.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\globaldefs.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\GL\glut.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\GlutWindow.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\meshConverter\Mesh3D.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\meshConverter\VertexStructs.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="..\src\app\ViewerWindow.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\meshConverter\Mesh3D.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\app\main.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\core\ArcBall.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\core\GlutWindow.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="..\src\mathutil\CMatrix.cpp">
@@ -74,13 +68,19 @@
     <ClCompile Include="..\src\mathutil\CVector.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\app\ViewerWindow.cpp">
+    <ClCompile Include="..\src\core\GlutWindow.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\main.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="..\src\meshConverter\Mesh3D.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="..\src\meshConverter\Mesh3D_render.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\ViewerWindow.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

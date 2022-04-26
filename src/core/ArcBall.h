@@ -9,10 +9,10 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include "mathutil\CPosition.h"
-#include "mathutil\CVector.h"
-#include "mathutil\CMatrix.h"
-#include "mathutil\CQuaternion.h"
+#include "../mathutil/CPosition.h"
+#include "../mathutil/CVector.h"
+#include "../mathutil/CMatrix.h"
+#include "../mathutil/CQuaternion.h"
 
 class CArcBall  
 {
